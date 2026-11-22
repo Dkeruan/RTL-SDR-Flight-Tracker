@@ -1,0 +1,45 @@
+--- a/decoder.py
++++ b/decoder.py
+@@ -1136,12 +1136,29 @@
+             (lat, lon) = self.calculate_lat_lon(self.plane_dict[self.aa_str]["cpr"])
+             alt = self.decode_ac12(self.bits[40:40+12])
+ 
+-            # TODO: Temporary hack to make sure bad lat/lons don"t get published
+-            if (lat - self.plane_dict[self.aa_str]["latitude"]) < 0.1 and (lat - self.plane_dict[self.aa_str]["latitude"]) < 0.1:
++            # Reject invalid coordinates and large CPR jumps. The first valid
++            # CPR position has no previous coordinates to compare against.
++            previous_lat = self.plane_dict[self.aa_str]["latitude"]
++            previous_lon = self.plane_dict[self.aa_str]["longitude"]
++            coordinates_in_range = (
++                np.isfinite(lat)
++                and np.isfinite(lon)
++                and -90.0 <= lat <= 90.0
++                and -180.0 <= lon <= 180.0
++            )
++            has_previous_position = (
++                np.isfinite(previous_lat) and np.isfinite(previous_lon)
++            )
++            if not coordinates_in_range:
++                valid_lat_lon = False
++            elif not has_previous_position:
+                 valid_lat_lon = True
+             else:
+-                # Figure out what went wrong
+-                valid_lat_lon = False
++                latitude_change = abs(lat - previous_lat)
++                longitude_change = abs((lon - previous_lon + 180.0) % 360.0 - 180.0)
++                valid_lat_lon = latitude_change < 0.1 and longitude_change < 0.1
++
++            if not valid_lat_lon:
+                 self.log("debug", "valid_lat_lon", valid_lat_lon)
+                 self.log("debug", "lat_cpr", lat_cpr)
+                 self.log("debug", "lon_cpr", lon_cpr)
+@@ -1149,7 +1166,7 @@
+                 self.log("debug", "lon", lon)
+ 
+             self.plane_dict[self.aa_str]["altitude"] = alt
+-            if np.isnan(lat) == False and np.isnan(lon) == False:
++            if coordinates_in_range:
+                 self.plane_dict[self.aa_str]["latitude"] = lat
+                 self.plane_dict[self.aa_str]["longitude"] = lon
+ 

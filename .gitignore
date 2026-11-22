@@ -1,0 +1,10 @@
+.DS_Store
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.flight-tracker.env
+aircraft_snapshot_live.json
+aircraft_snapshot_live.tmp
+.impeccable/
+
